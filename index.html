@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Catch Orchild</title>
+</head>
+<body>
+  <canvas id="canvas" width="1200px" height="500px"></canvas>
+  <script>
+  		
+  	const PI = Math.PI / 180;
+
+class Vector{
+
+  constructor(x = 0, y = 0){
+    this.x = x;
+    this.y = y;
+  }
+
+}
+
+class Projectile{
+
+  constructor(gravity = 10.0, angle = 45, velocity = 100, fastfoward = 1 ){
+    this.gravity = gravity;
+    this.velocity = velocity;
+    this.angle = angle;
+    this.fastfoward = fastfoward;
+  }
+
+  get distanceOfTravel(){
+    return (this.velocity * this.velocity * Math.sin(2 * this.angle * PI)) / this.gravity;
+
+  }
+
+}
+
+class Rect{
+
+  constructor(w,h){
+    // Every rectangle will have a position
+    this.pos = new Vector();
+    // and also  a size
+    this.size = new Vector(w,h);
+
+  }
+
+  get left(){
+    return this.pos.x - this.size.x / 2;
+  }
+
+  get right(){
+    return this.pos.x + this.size.x / 2;
+  }
+
+  get top(){
+    return this.pos.y - this.size.y / 2;
+  }
+
+  get bottom(){
+    return this.pos.y + this.size.y / 2;
+    //   return this.pos.y;
+  }
+
+}
+
+class Fruit extends Rect{
+
+  constructor(size, color, projectile){
+    super(size,size); // setting the width and height
+    this.pos.x = 0 ;
+    this.pos.y = 300 ;
+    this.color = color ;
+    this.timeOffset = 1.0;
+    this.totalFlightTime = 0;
+    this.projectile = new Projectile( projectile.gravity,projectile.angle, projectile.velocity, projectile.fastfoward);
+    this.projectile.time = 0;
+    this.projectile.xPadding = 0;
+
+  }
+
+}
+
+class Mango extends Fruit{
+  constructor(){
+    super(30, '#ff0', { gravity: 10.0, angle: 10, velocity: 100,  fastfoward: 1 });
+  }
+}
+
+class Banana extends Fruit{
+  constructor(){
+    super(20, '#f00', { gravity: 10.0, angle: 10, velocity: 100,  fastfoward: 4 });
+  }
+}
+
+class Orange extends Fruit{
+  constructor(){
+    super(40, '#f0f', {  gravity: 10.0, angle: 10, velocity: 100,  fastfoward: 2 });
+  }
+}
+
+class WaterMelon extends Fruit{
+  constructor(){
+    super(50, '#0ff',{   gravity: 10.0, angle: 10, velocity: 100,  fastfoward: 3 });
+  }
+}
+
+class Slab extends Rect{
+
+  constructor(x,y){
+    super(100,7); // setting the width and height
+    this.slabYPositions = [ 330, 660, 990];
+    this.slabPosIndex = x;
+    this.updatePos();
+    this.pos.y = y;
+  }
+
+  updatePos(){
+    this.pos.x = this.slabYPositions[this.slabPosIndex];
+  }
+
+}//
+
+
+class CatchOrchard{
+
+  constructor(canvas){
+    this._canvas = canvas;
+    this._context = canvas.getContext('2d');
+    this.gameScore = 0;
+
+    let lastTime;
+
+    this._slab = new Slab(0, this._canvas.height - 30);
+
+    this.fruitsSpaceTimeDivisor = 1.05;
+
+    this._fruits = [];
+
+    const callback  = millis => {
+
+      if(this.requestId === null){
+        return;
+      }
+
+      if(lastTime){
+        this.update((millis - lastTime) / 1000);
+      }
+      lastTime = millis;
+      this.requestId = requestAnimationFrame(callback);
+
+    };
+
+    callback();
+
+    //this.start();
+
+    this.reset();
+
+  }
+
+
+  gameOver(){
+
+    console.log('gameover');
+
+    this.reset();
+
+
+  }
+
+  draw(){
+
+    this._context.fillStyle = '#000';
+
+    this._context.fillRect(0,0,this._canvas.width, this._canvas.height);
+
+    this.drawRect(this._slab);
+
+    this.drawScore();
+
+    this._fruits.forEach(fruit => {
+
+      this.drawRect(fruit, fruit.color);
+
+    });
+
+  }
+
+  drawScore(){
+
+    this._context.fillStyle = '#fff';
+
+    this._context.font = "50px Helvetica";
+
+    this._context.fillText("Score: " + this.gameScore, 50, 50);
+
+  }
+
+  drawRect(rect, color){
+
+    if(!color){
+      color = '#fff';
+    }
+
+    this._context.fillStyle = color;
+    this._context.fillRect(rect.left,rect.top,rect.size.x, rect.size.y);
+
+  }
+
+  reset(){
+
+    var fruit = this.newFruit();
+
+    this._fruits = [ new fruit() ];
+
+    this.gameScore = 0;
+
+    this.fruitsSpaceTime = 7;
+
+  }
+
+  newFruit(){
+
+    var fruits = [Mango, Banana, WaterMelon, Orange];
+
+    var min = 0;
+
+    var max = fruits.length - 1;
+
+    var rand = Math.floor(Math.random() * (max - min + 1)) + min;
+
+    // return fruits[0];
+
+    return fruits[rand];
+
+  }
+
+  start(){
+
+    var fruit = this.newFruit();
+
+    this._fruits = [ new fruit() ];
+
+  }
+
+  stopGame(){
+
+    if (this.requestId) {
+
+      window.cancelAnimationFrame(this.requestId);
+
+      this.requestId = null;
+
+    }
+
+  }
+
+  update(dt){
+
+    this._fruits.forEach((fruit, index) => {
+
+      var angle = fruit.projectile.angle * PI;
+
+      var time = fruit.projectile.time += (dt * fruit.projectile.fastfoward);
+
+      //if(fruit.projectile.xPadding === 0){
+
+         time += fruit.timeOffset;
+
+     // }
+
+      fruit.totalFlightTime += dt;
+
+      fruit.pos.y = this._canvas.height - fruit.projectile.velocity * time * Math.cos(angle) + (0.5 * fruit.projectile.gravity * time * time) ;
+
+      fruit.pos.x = fruit.projectile.xPadding + (fruit.projectile.velocity * Math.sin(angle) * time  );
+
+      if(fruit.bottom > this._slab.top){
+
+        if(fruit.pos.x > this._slab.left && fruit.pos.x < this._slab.right){
+
+          fruit.projectile.time = 0;
+
+          fruit.projectile.xPadding = fruit.pos.x;
+
+        }else{
+
+          this.gameOver();
+
+        }
+
+      }
+
+      if(fruit.pos.x > this._canvas.width){
+
+        this._fruits.splice(index,1);
+
+        this.gameScore++;
+
+        console.log('spliced');
+
+      }
+
+    });
+
+    if(this._fruits[this._fruits.length - 1].totalFlightTime > this.fruitsSpaceTime){
+
+      this.fruitsSpaceTime /= this.fruitsSpaceTimeDivisor;
+
+      console.log(this.fruitsSpaceTime);
+
+      var newFruit = this.newFruit();
+
+      this._fruits.push(new newFruit());
+
+    }
+
+    this.draw();
+
+  }
+
+  playerLeft(){
+
+    if(this._slab.slabPosIndex > 0){
+
+      this._slab.slabPosIndex--;
+
+      this._slab.updatePos();
+
+    }
+
+  }
+
+  playerRight(){
+
+    if(this._slab.slabPosIndex < this._slab.slabYPositions.length - 1){
+
+      this._slab.slabPosIndex++;
+
+      this._slab.updatePos();
+
+    }
+
+  }
+
+}
+
+const canvas = document.getElementById('canvas');
+
+const game = new CatchOrchard(canvas);
+
+window.addEventListener('keydown', event => {
+
+  if(event.which == 37){
+    game.playerLeft();
+  }else if(event.which == 39){
+    game.playerRight();
+  }
+});
+
+canvas.addEventListener('click', event => {
+  game.start();
+});
+
+window.addEventListener('dblclick', event => {
+  game.stopGame();
+});
+
+  </script>
+</body>
+</html>
